@@ -1,0 +1,24 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String
+  tasks Task[]
+}
+
+model Task {
+  id           Int      @id @default(autoincrement())
+  title        String
+  deadline     DateTime
+  importance   Int      // 1〜5の数値（5が最重要）
+  is_completed Boolean  @default(false)
+  category_id  Int
+  category     Category @relation(fields: [category_id], references: [id])
+}

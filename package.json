@@ -1,0 +1,17 @@
+{
+  "name": "render-todo-app",
+  "version": "1.0.0",
+  "description": "Todo App with Node.js, Express, Prisma, and SQLite",
+  "main": "server.js",
+  "scripts": {
+    "start": "npx prisma db push && node server.js",
+    "build": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
+  }
+}

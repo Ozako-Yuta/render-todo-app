@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToDo App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>AIオススメ順 ToDoアプリ</h1>
+
+    <section class="form-section">
+      <h2>新規タスク追加</h2>
+      <form id="todo-form">
+        <input type="text" id="task-title" placeholder="タスク名を入力" required>
+        <div class="form-row">
+          <label>期限: <input type="date" id="task-deadline" required></label>
+          <label>重要度: 
+            <select id="task-importance">
+              <option value="1">1 (低)</option>
+              <option value="2">2</option>
+              <option value="3" selected>3 (中)</option>
+              <option value="4">4</option>
+              <option value="5">5 (高)</option>
+            </select>
+          </label>
+          <label>カテゴリ: <select id="task-category" required></select></label>
+        </div>
+        <button type="submit">タスクを追加</button>
+      </form>
+    </section>
+
+    <div class="main-content">
+      <section class="list-section">
+        <h2>タスク一覧 (オススメ順)</h2>
+        <ul id="task-list"></ul>
+      </section>
+
+      <section class="calendar-section">
+        <h2>カレンダーUI</h2>
+        <div id="calendar-controls">
+          <button id="prev-month">&lt;</button>
+          <span id="calendar-month-year"></span>
+          <button id="next-month">&gt;</button>
+        </div>
+        <div class="calendar-grid-header">
+          <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+      </section>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
