@@ -82,6 +82,24 @@ app.post('/tasks', async (req, res) => {
   }
 });
 
+// タスクを削除する受付窓口
+app.delete('/api/tasks/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Prismaを使ってデータベースから削除
+    await prisma.task.delete({
+      where: { 
+        id: Number(id) // IDが数値型の場合。もし文字列（UUID等）なら Number() は不要です
+      },
+    });
+    res.json({ success: true, message: '削除に成功しました' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: '削除に失敗しました' });
+  }
+});
+
 // 【API拡張】タスクのステータス更新（完了・未完了の切り替え用）
 app.patch('/tasks/:id', async (req, res) => {
   const { id } = req.params;

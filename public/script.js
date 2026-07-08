@@ -40,6 +40,7 @@ function renderTaskList() {
         <div>
           <span class="badge imp-${task.importance}">重要度:${task.importance}</span>
           <span class="badge">期限:${dateStr}</span>
+          <button class="delete-btn" onclick="deleteTask(${task.id})">削除</button>
         </div>
       </li>
     `;
@@ -94,5 +95,25 @@ function renderCalendar() {
       cell.appendChild(dot);
     }
     grid.appendChild(cell);
+  }
+}
+
+// 削除ボタンが押されたときに動く関数
+async function deleteTask(id) {
+  try {
+    // サーバーの受付窓口に「消して！」とリクエストを送る
+    const response = await fetch(`/api/tasks/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      // 💡 location.reload() の代わりに、アプリ既存の更新関数を呼び出す
+      loadTasks();
+    } else {
+      alert('削除に失敗しました');
+    }
+  } catch (error) {
+    console.error('エラーが発生しました:', error);
+    alert('通信エラーが発生しました');
   }
 }
