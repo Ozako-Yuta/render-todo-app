@@ -44,7 +44,7 @@ input[type="text"] {
   box-sizing: border-box; 
 }
 
-/* 標準のボタン（追加ボタンなど） */
+/* 標準のボタン */
 button { 
   background-color: #3498db; 
   color: white; 
@@ -150,21 +150,17 @@ ul {
   transform: translateX(-50%); 
 }
 
-/* ==========================================================================
-   追加：削除ボタン & レイアウト微調整用のスタイル
-   ========================================================================== */
 .delete-btn {
-  background-color: #e74c3c; /* 警告を表す赤色 */
+  background-color: #e74c3c; 
   padding: 6px 12px;
   font-size: 13px;
   margin-left: 10px;
 }
 
 .delete-btn:hover {
-  background-color: #c0392b; /* マウスを乗せたときは少し濃い赤に */
+  background-color: #c0392b; 
 }
 
-/* タスクの文字情報を左側にきれいにまとめるための調整 */
 .task-info {
   display: flex;
   align-items: center;

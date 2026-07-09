@@ -15,7 +15,7 @@
       <form id="todo-form">
         <input type="text" id="task-title" placeholder="タスク名を入力" required>
         <div class="form-row">
-          <label>期限: <input type="date" id="task-deadline" required></label>
+          <label>期限: <input type="date" id="task-deadline"></label>
           <label>重要度: 
             <select id="task-importance">
               <option value="1">1 (低)</option>
@@ -39,11 +39,10 @@
           <button type="submit">カテゴリを追加</button>
         </div>
       </form>
-        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-          <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ（削除）</h3>
-          <ul id="category-management-list" style="padding: 0; list-style: none;"></ul>
-        </div>
-      </form>
+      <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ（削除）</h3>
+        <ul id="category-management-list" style="padding: 0; list-style: none;"></ul>
+      </div>
     </section>
 
     <div class="main-content">
@@ -53,7 +52,7 @@
       </section>
 
       <section class="calendar-section">
-        <h2>カレンダーUI</h2>
+        <h2>カレンダー</h2>
         <div id="calendar-controls">
           <button id="prev-month">&lt;</button>
           <span id="calendar-month-year"></span>
@@ -63,6 +62,10 @@
           <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
         </div>
         <div id="calendar-grid" class="calendar-grid"></div>
+        <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
+          <h3 style="font-size: 16px; color: #555; margin-bottom: 10px;">📋 期限のないタスク</h3>
+          <ul id="no-deadline-list" style="padding: 0; list-style: none;"></ul>
+        </div>
       </section>
     </div>
   </div>

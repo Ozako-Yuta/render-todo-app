@@ -44,22 +44,19 @@ app.post('/categories', async (req, res) => {
 app.get('/tasks', async (req, res) => {
   try {
     const now = new Date();
-    // カテゴリ情報を含めてデータベースから全取得
     const tasks = await prisma.task.findMany({
       include: {
         category: true
       }
     });
     
-    // 【オススメ順の計算ロジック】
     // スコア = (重要度 * 10) - (締め切りまでの残り日数)
-    // 未完了タスクを優先し、スコアが高い順（降順）にソート
     const sortedTasks = tasks.sort((a, b) => {
       if (a.is_completed !== b.is_completed) {
         return a.is_completed ? 1 : -1; 
       }
-      const daysLeftA = (new Date(a.deadline) - now) / (1000 * 60 * 60 * 24);
-      const daysLeftB = (new Date(b.deadline) - now) / (1000 * 60 * 60 * 24);
+      const daysLeftA = a.deadline ? (new Date(a.deadline) - now) / (1000 * 60 * 60 * 24) : 999;
+      const daysLeftB = b.deadline ? (new Date(b.deadline) - now) / (1000 * 60 * 60 * 24) : 999;
 
       const scoreA = (a.importance * 10) - daysLeftA;
       const scoreB = (b.importance * 10) - daysLeftB;
@@ -80,7 +77,7 @@ app.post('/tasks', async (req, res) => {
     const newTask = await prisma.task.create({
       data: {
         title,
-        deadline: new Date(deadline),
+        deadline: deadline ? new Date(deadline) : null,
         importance: Number(importance),
         categoryId: Number(category_id)
       }
@@ -119,7 +116,6 @@ app.delete('/categories/:id', async (req, res) => {
     });
     res.json({ success: true, message: 'カテゴリを削除しました' });
   } catch (error) {
-    // 💡 Prismaのエラーコード「P2003」は、他のデータ（タスク）がこのカテゴリを使っているという意味です
     if (error.code === 'P2003') {
       return res.status(400).json({ error: 'このカテゴリを使用しているタスクが残っているため、削除できません。' });
     }
@@ -128,13 +124,13 @@ app.delete('/categories/:id', async (req, res) => {
   }
 });
 
-// 【API】タスクのステータス更新（完了・未完了の切り替え用）
+// 【API】タスクのステータス更新
 app.patch('/tasks/:id', async (req, res) => {
   const { id } = req.params;
   const { is_completed } = req.body;
   try {
     const updatedTask = await prisma.task.update({
-      where: { id: parseInt(id) },
+      where: { id: Number(id) },
       data: { is_completed }
     });
     res.json(updatedTask);

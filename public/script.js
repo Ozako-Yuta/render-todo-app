@@ -10,19 +10,33 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTasks();
 
   document.getElementById('todo-form').addEventListener('submit', handleFormSubmit);
-  document.getElementById('prev-month').addEventListener('click', () => { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); });
-  document.getElementById('next-month').addEventListener('click', () => { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } renderCalendar(); });
   document.getElementById('category-form').addEventListener('submit', handleCategorySubmit);
+  
+  document.getElementById('prev-month').addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar();
+  });
+  
+  document.getElementById('next-month').addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar();
+  });
 });
 
 async function loadCategories() {
   const res = await fetch('/categories');
   const categories = await res.json();
   
-  // 1. タスク追加用のプルダウンを更新
   document.getElementById('task-category').innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   
-  // 2. 💡【追記】カテゴリ管理リスト（削除ボタン付き）を更新
   const managementList = document.getElementById('category-management-list');
   if (managementList) {
     managementList.innerHTML = categories.map(c => `
@@ -42,12 +56,13 @@ async function loadTasks() {
 }
 
 function renderTaskList() {
+  // 1. 左側のメインリスト（全タスク）の描画
   const list = document.getElementById('task-list');
   list.innerHTML = allTasks.map(task => {
-    const dateStr = new Date(task.deadline).toLocaleDateString('ja-JP');
+    const dateStr = task.deadline ? new Date(task.deadline).toLocaleDateString('ja-JP') : 'なし';
     return `
       <li class="task-item ${task.is_completed ? 'completed' : ''}">
-        <div>
+        <div class="task-info">
           <input type="checkbox" ${task.is_completed ? 'checked' : ''} onchange="toggleTask(${task.id}, this.checked)">
           <span class="task-title-text"><strong>[${task.category.name}]</strong> ${task.title}</span>
         </div>
@@ -59,6 +74,29 @@ function renderTaskList() {
       </li>
     `;
   }).join('');
+
+  // 2. 右側の「期限のないタスク」欄の描画
+  const noDeadlineList = document.getElementById('no-deadline-list');
+  if (noDeadlineList) {
+    const noDeadlineTasks = allTasks.filter(task => !task.deadline);
+    
+    if (noDeadlineTasks.length === 0) {
+      noDeadlineList.innerHTML = '<li style="color: #aaa; font-size: 14px; padding: 5px 0;">なし</li>';
+    } else {
+      noDeadlineList.innerHTML = noDeadlineTasks.map(task => `
+        <li class="task-item ${task.is_completed ? 'completed' : ''}" style="padding: 8px 0;">
+          <div class="task-info">
+            <input type="checkbox" ${task.is_completed ? 'checked' : ''} onchange="toggleTask(${task.id}, this.checked)">
+            <span class="task-title-text" style="font-size: 14px;"><strong>[${task.category.name}]</strong> ${task.title}</span>
+          </div>
+          <div>
+            <span class="badge imp-${task.importance}">重要度:${task.importance}</span>
+            <button class="delete-btn" style="padding: 3px 8px; font-size: 11px; margin: 0 0 0 5px;" onclick="deleteTask(${task.id})">削除</button>
+          </div>
+        </li>
+      `).join('');
+    }
+  }
 }
 
 async function handleFormSubmit(e) {
@@ -73,7 +111,10 @@ async function handleFormSubmit(e) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, deadline, importance, category_id })
   });
-  if (res.ok) { document.getElementById('todo-form').reset(); loadTasks(); }
+  if (res.ok) { 
+    document.getElementById('todo-form').reset(); 
+    loadTasks(); 
+  }
 }
 
 async function toggleTask(id, is_completed) {
@@ -93,15 +134,21 @@ function renderCalendar() {
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+  for (let i = 0; i < firstDay; i++) {
+    grid.appendChild(document.createElement('div'));
+  }
 
   for (let date = 1; date <= lastDate; date++) {
     const cell = document.createElement('div');
     cell.className = 'calendar-cell';
     cell.innerHTML = `<span class="day-num">${date}</span>`;
 
-    const cellDateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-    const hasTask = allTasks.some(t => new Date(t.deadline).toISOString().split('T')[0] === cellDateStr && !t.is_completed);
+    // 💡 タイムゾーンのバグを防ぐため、ローカル日付文字列で比較する安全な方法に修正
+    const targetDateStr = new Date(currentYear, currentMonth, date).toLocaleDateString('ja-JP');
+    const hasTask = allTasks.some(t => {
+      if (!t.deadline || t.is_completed) return false;
+      return new Date(t.deadline).toLocaleDateString('ja-JP') === targetDateStr;
+    });
 
     if (hasTask) {
       const dot = document.createElement('div');
@@ -112,16 +159,12 @@ function renderCalendar() {
   }
 }
 
-// 削除ボタンが押されたときに動く関数
 async function deleteTask(id) {
   try {
-    // サーバーの受付窓口に「消して！」とリクエストを送る
     const response = await fetch(`/api/tasks/${id}`, {
       method: 'DELETE',
     });
-
     if (response.ok) {
-      // 💡 location.reload() の代わりに、アプリ既存の更新関数を呼び出す
       loadTasks();
     } else {
       alert('削除に失敗しました');
@@ -132,7 +175,6 @@ async function deleteTask(id) {
   }
 }
 
-//サーバーに名前を登録
 async function handleCategorySubmit(e) {
   e.preventDefault();
   const nameInput = document.getElementById('new-category-name');
@@ -147,26 +189,22 @@ async function handleCategorySubmit(e) {
   if (res.ok) {
     nameInput.value = ''; 
     await loadCategories(); 
-    // 💡 alert の行を削除しました！これだけで煩わしさはゼロになります。
   } else {
     const errData = await res.json();
     alert(errData.error || 'カテゴリの追加に失敗しました');
   }
 }
 
-// カテゴリ削除ボタンが押されたときに動く関数
 async function deleteCategory(id) {
   try {
     const res = await fetch(`/categories/${id}`, {
       method: 'DELETE'
     });
-
     if (res.ok) {
-      await loadCategories(); // カテゴリ一覧を最新にする
-      loadTasks();           // タスク一覧も再読み込み（表示の崩れを防ぐため）
+      await loadCategories();
+      loadTasks(); 
     } else {
       const errData = await res.json();
-      // サーバーから返ってきたエラーメッセージ（タスクが残っている等）を表示
       alert(errData.error || 'カテゴリの削除に失敗しました');
     }
   } catch (error) {
