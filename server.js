@@ -23,22 +23,33 @@ seedCategories();
 
 // 【API】カテゴリ一覧の取得
 app.get('/categories', async (req, res) => {
+  const categories = await prisma.category.findMany();
+  res.json(categories);
+});
+
+// 【API】新しいカテゴリの追加
+app.post('/categories', async (req, res) => {
+  const { name } = req.body;
   try {
-    const categories = await prisma.category.findMany();
-    res.json(categories);
+    const newCategory = await prisma.category.create({
+      data: { name }
+    });
+    res.json(newCategory);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(400).json({ error: "そのカテゴリは既に存在するか、作成に失敗しました" });
   }
 });
 
 // 【API】タスク一覧取得（オススメ順計算）
 app.get('/tasks', async (req, res) => {
   try {
-    const tasks = await prisma.task.findMany({
-      include: { category: true }
-    });
-
     const now = new Date();
+    // カテゴリ情報を含めてデータベースから全取得
+    const tasks = await prisma.task.findMany({
+      include: {
+        category: true
+      }
+    });
     
     // 【オススメ順の計算ロジック】
     // スコア = (重要度 * 10) - (締め切りまでの残り日数)
@@ -70,27 +81,24 @@ app.post('/tasks', async (req, res) => {
       data: {
         title,
         deadline: new Date(deadline),
-        importance: parseInt(importance),
-        category_id: parseInt(category_id),
-        is_completed: false
-      },
-      include: { category: true }
+        importance: Number(importance),
+        categoryId: Number(category_id)
+      }
     });
-    res.status(201).json(newTask);
+    res.json(newTask);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error);
+    res.status(500).json({ error: "タスクの追加に失敗しました" });
   }
 });
 
-// タスクを削除する受付窓口
+// 【API】タスクを削除する受付窓口
 app.delete('/api/tasks/:id', async (req, res) => {
   const { id } = req.params;
-
   try {
-    // Prismaを使ってデータベースから削除
     await prisma.task.delete({
       where: { 
-        id: Number(id) // IDが数値型の場合。もし文字列（UUID等）なら Number() は不要です
+        id: Number(id)
       },
     });
     res.json({ success: true, message: '削除に成功しました' });
@@ -100,7 +108,27 @@ app.delete('/api/tasks/:id', async (req, res) => {
   }
 });
 
-// 【API拡張】タスクのステータス更新（完了・未完了の切り替え用）
+// 【API】カテゴリを削除する受付窓口
+app.delete('/categories/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.category.delete({
+      where: { 
+        id: Number(id) 
+      }
+    });
+    res.json({ success: true, message: 'カテゴリを削除しました' });
+  } catch (error) {
+    // 💡 Prismaのエラーコード「P2003」は、他のデータ（タスク）がこのカテゴリを使っているという意味です
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'このカテゴリを使用しているタスクが残っているため、削除できません。' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'カテゴリの削除に失敗しました' });
+  }
+});
+
+// 【API】タスクのステータス更新（完了・未完了の切り替え用）
 app.patch('/tasks/:id', async (req, res) => {
   const { id } = req.params;
   const { is_completed } = req.body;

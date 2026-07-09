@@ -31,6 +31,21 @@
       </form>
     </section>
 
+    <section class="form-section">
+      <h2>新しいカテゴリを追加</h2>
+      <form id="category-form">
+        <div class="form-row">
+          <input type="text" id="new-category-name" placeholder="カテゴリ名を入力（例: 趣味）" required>
+          <button type="submit">カテゴリを追加</button>
+        </div>
+      </form>
+        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+          <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ（削除）</h3>
+          <ul id="category-management-list" style="padding: 0; list-style: none;"></ul>
+        </div>
+      </form>
+    </section>
+
     <div class="main-content">
       <section class="list-section">
         <h2>タスク一覧 (オススメ順)</h2>

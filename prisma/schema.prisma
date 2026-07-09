@@ -7,18 +7,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Category {
-  id    Int    @id @default(autoincrement())
-  name  String
-  tasks Task[]
-}
-
+// 既存のTaskモデルを以下のように書き換えます（categoryの部分を変更）
 model Task {
   id           Int      @id @default(autoincrement())
   title        String
   deadline     DateTime
-  importance   Int      // 1〜5の数値（5が最重要）
+  importance   Int
   is_completed Boolean  @default(false)
-  category_id  Int
-  category     Category @relation(fields: [category_id], references: [id])
+  
+  // カテゴリとの紐付け設定
+  categoryId   Int
+  category     Category @relation(fields: [categoryId], references: [id])
+}
+
+// 👇 新しくこのCategoryモデルをファイルの末尾に追記します
+model Category {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  tasks Task[] // このカテゴリに属するタスクたち
 }
