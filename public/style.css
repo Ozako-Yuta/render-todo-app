@@ -33,7 +33,7 @@ section {
   flex-wrap: wrap; 
 }
 
-input[type="text"], select, input[type="date"] { 
+input[type="text"], select, input[type="date"], input[type="number"] { 
   padding: 8px; 
   border: 1px solid #ddd; 
   border-radius: 4px; 
@@ -44,8 +44,8 @@ input[type="text"] {
   box-sizing: border-box; 
 }
 
-/* 標準のボタン */
-button { 
+/* 標準のプライマリボタン */
+button, .primary-btn { 
   background-color: #3498db; 
   color: white; 
   border: none; 
@@ -54,8 +54,56 @@ button {
   cursor: pointer; 
 }
 
-button:hover { 
+button:hover, .primary-btn:hover { 
   background-color: #2980b9; 
+}
+
+/* ⚙️ チューニングパネル用スタイル */
+.tuning-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.tuning-item {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tuning-item label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #34495e;
+}
+
+.tuning-item input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+
+.tuning-action {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* セカンダリボタン */
+.secondary-btn {
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background-color: #7f8c8d;
 }
 
 /* レイアウト */
@@ -96,8 +144,7 @@ ul {
   padding: 2px 6px; 
   border-radius: 4px; 
   font-size: 12px; 
-  color: white; 
-  background: #95a5a6; 
+  color: black; 
   margin-left: 5px; 
 }
 
@@ -107,6 +154,18 @@ ul {
 
 .badge.imp-4 { 
   background: #e67e22; 
+}
+
+.badge.imp-3 {
+  background: #ffff00;
+}
+
+.badge.imp-2 {
+  background: #cfff00;
+}
+
+.badge.imp-1 {
+  background: #a0ff00;
 }
 
 /* カレンダー用 */
@@ -140,15 +199,23 @@ ul {
 }
 
 .calendar-cell .has-task { 
-  width: 6px; 
-  height: 6px; 
-  background: #e74c3c; 
+  width: 8px; 
+  height: 8px; 
   border-radius: 50%; 
+  border: 1px solid #333;
   position: absolute; 
   bottom: 5px; 
   left: 50%; 
   transform: translateX(-50%); 
+  box-sizing: border-box;
 }
+
+/* カレンダーのドットを重要度別に色分け */
+.calendar-cell .has-task.imp-1 { background: #a0ff00; }
+.calendar-cell .has-task.imp-2 { background: #cfff00; }
+.calendar-cell .has-task.imp-3 { background: #ffff00; }
+.calendar-cell .has-task.imp-4 { background: #e67e22; }
+.calendar-cell .has-task.imp-5 { background: #e74c3c; }
 
 .delete-btn {
   background-color: #e74c3c; 

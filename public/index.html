@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>AIオススメ順 ToDoアプリ</h1>
+    <h1>ToDoアプリ</h1>
 
     <section class="form-section">
       <h2>新規タスク追加</h2>
@@ -40,8 +40,27 @@
         </div>
       </form>
       <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-        <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ（削除）</h3>
+        <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ</h3>
         <ul id="category-management-list" style="padding: 0; list-style: none;"></ul>
+      </div>
+    </section>
+
+    <section class="config-section">
+      <h2>⚙️ 優先度スコアのチューニング</h2>
+      <p style="font-size: 13px; color: #666; margin: -5px 0 15px 0;">数値を変更すると、リアルタイムでタスクの「オススメ順」が入れ替わります。</p>
+      <div class="tuning-grid">
+        <div class="tuning-item">
+          <label for="weight-importance">🔥 重要度の強さ（倍率）</label>
+          <input type="number" id="weight-importance" min="0" max="100" value="10" step="1">
+        </div>
+        <div class="tuning-item">
+          <label for="weight-deadline">⏳ 期限の焦り度（倍率）</label>
+          <input type="number" id="weight-deadline" min="0" max="100" value="1" step="0.5">
+        </div>
+        <div class="tuning-action">
+          <button type="button" id="btn-save-default" class="primary-btn">デフォルトとして設定</button>
+          <button type="button" id="btn-restore-default" class="secondary-btn">デフォルトに戻す</button>
+        </div>
       </div>
     </section>
 

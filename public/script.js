@@ -1,10 +1,75 @@
 let currentYear, currentMonth;
 let allTasks = [];
+// ⚙️ スコア計算用の重み変数（初期値）
+let impWeight = 10;
+let deadlineWeight = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
   currentYear = now.getFullYear();
   currentMonth = now.getMonth();
+
+  // 1. まずユーザーが設定した「マイ・デフォルト値」を読み込む（なければ10と1）
+  const defaultImp = localStorage.getItem('defaultImpWeight') !== null ? parseFloat(localStorage.getItem('defaultImpWeight')) : 10;
+  const defaultDeadline = localStorage.getItem('defaultDeadlineWeight') !== null ? parseFloat(localStorage.getItem('defaultDeadlineWeight')) : 1;
+
+  // 2. 現在のセッションの値を読み込む（なければ上記のデフォルト値）
+  impWeight = localStorage.getItem('impWeight') !== null ? parseFloat(localStorage.getItem('impWeight')) : defaultImp;
+  deadlineWeight = localStorage.getItem('deadlineWeight') !== null ? parseFloat(localStorage.getItem('deadlineWeight')) : defaultDeadline;
+
+  // 入力フォームへの反映
+  const impInput = document.getElementById('weight-importance');
+  const deadlineInput = document.getElementById('weight-deadline');
+  const saveDefaultBtn = document.getElementById('btn-save-default');
+  const restoreDefaultBtn = document.getElementById('btn-restore-default');
+
+  if (impInput && deadlineInput) {
+    impInput.value = impWeight;
+    deadlineInput.value = deadlineWeight;
+
+    // 数値変更時のリアルタイムイベント
+    impInput.addEventListener('input', (e) => {
+      impWeight = parseFloat(e.target.value) || 0;
+      localStorage.setItem('impWeight', impWeight);
+      renderTaskList();
+    });
+
+    deadlineInput.addEventListener('input', (e) => {
+      deadlineWeight = parseFloat(e.target.value) || 0;
+      localStorage.setItem('deadlineWeight', deadlineWeight);
+      renderTaskList();
+    });
+  }
+
+  // 💾 「デフォルトとして設定」ボタンのイベント（確認フェーズの追加 ＆ 完了通知の廃止）
+  if (saveDefaultBtn) {
+    saveDefaultBtn.addEventListener('click', () => {
+      const isConfirmed = confirm(`現在の設定（重要度: ${impWeight}倍 / 期限: ${deadlineWeight}倍）を新しいデフォルト値として登録しますか？`);
+      if (isConfirmed) {
+        localStorage.setItem('defaultImpWeight', impWeight);
+        localStorage.setItem('defaultDeadlineWeight', deadlineWeight);
+        // アクション完了後の不要なアラートは出さずに静かに処理を終えます
+      }
+    });
+  }
+
+  // 🔄 「デフォルトに戻す」ボタンのイベント
+  if (restoreDefaultBtn) {
+    restoreDefaultBtn.addEventListener('click', () => {
+      const dImp = localStorage.getItem('defaultImpWeight') !== null ? parseFloat(localStorage.getItem('defaultImpWeight')) : 10;
+      const dDeadline = localStorage.getItem('defaultDeadlineWeight') !== null ? parseFloat(localStorage.getItem('defaultDeadlineWeight')) : 1;
+      
+      impWeight = dImp;
+      deadlineWeight = dDeadline;
+      
+      if (impInput) impInput.value = impWeight;
+      if (deadlineInput) deadlineInput.value = deadlineWeight;
+      
+      localStorage.setItem('impWeight', impWeight);
+      localStorage.setItem('deadlineWeight', deadlineWeight);
+      renderTaskList(); // リストを登録したデフォルト順に再描画
+    });
+  }
 
   loadCategories();
   loadTasks();
@@ -56,9 +121,31 @@ async function loadTasks() {
 }
 
 function renderTaskList() {
-  // 1. 左側のメインリスト（全タスク）の描画
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const sortedTasks = [...allTasks].sort((a, b) => {
+    if (a.is_completed !== b.is_completed) {
+      return a.is_completed ? 1 : -1;
+    }
+
+    const calcScore = (task) => {
+      let score = task.importance * impWeight;
+      
+      if (task.deadline) {
+        const deadlineDate = new Date(task.deadline);
+        deadlineDate.setHours(0, 0, 0, 0);
+        const daysLeft = Math.round((deadlineDate - today) / (1000 * 60 * 60 * 24));
+        score -= (daysLeft * deadlineWeight);
+      }
+      return score;
+    };
+
+    return calcScore(b) - calcScore(a);
+  });
+
   const list = document.getElementById('task-list');
-  list.innerHTML = allTasks.map(task => {
+  list.innerHTML = sortedTasks.map(task => {
     const dateStr = task.deadline ? new Date(task.deadline).toLocaleDateString('ja-JP') : 'なし';
     return `
       <li class="task-item ${task.is_completed ? 'completed' : ''}">
@@ -75,10 +162,9 @@ function renderTaskList() {
     `;
   }).join('');
 
-  // 2. 右側の「期限のないタスク」欄の描画
   const noDeadlineList = document.getElementById('no-deadline-list');
   if (noDeadlineList) {
-    const noDeadlineTasks = allTasks.filter(task => !task.deadline);
+    const noDeadlineTasks = sortedTasks.filter(task => !task.deadline);
     
     if (noDeadlineTasks.length === 0) {
       noDeadlineList.innerHTML = '<li style="color: #aaa; font-size: 14px; padding: 5px 0;">なし</li>';
@@ -118,12 +204,16 @@ async function handleFormSubmit(e) {
 }
 
 async function toggleTask(id, is_completed) {
-  await fetch(`/tasks/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ is_completed })
-  });
-  loadTasks();
+  try {
+    await fetch(`/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_completed })
+    });
+    loadTasks();
+  } catch (error) {
+    console.error('ステータス更新エラー:', error);
+  }
 }
 
 function renderCalendar() {
@@ -143,16 +233,18 @@ function renderCalendar() {
     cell.className = 'calendar-cell';
     cell.innerHTML = `<span class="day-num">${date}</span>`;
 
-    // 💡 タイムゾーンのバグを防ぐため、ローカル日付文字列で比較する安全な方法に修正
     const targetDateStr = new Date(currentYear, currentMonth, date).toLocaleDateString('ja-JP');
-    const hasTask = allTasks.some(t => {
+    
+    const dayTasks = allTasks.filter(t => {
       if (!t.deadline || t.is_completed) return false;
       return new Date(t.deadline).toLocaleDateString('ja-JP') === targetDateStr;
     });
 
-    if (hasTask) {
+    if (dayTasks.length > 0) {
+      const maxImportance = Math.max(...dayTasks.map(t => t.importance));
+      
       const dot = document.createElement('div');
-      dot.className = 'has-task';
+      dot.className = `has-task imp-${maxImportance}`;
       cell.appendChild(dot);
     }
     grid.appendChild(cell);
