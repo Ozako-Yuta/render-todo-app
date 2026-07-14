@@ -1,23 +1,25 @@
 let currentYear, currentMonth;
 let allTasks = [];
-// ⚙️ スコア計算用の重み変数（初期値）
 let impWeight = 10;
 let deadlineWeight = 1;
+let cachedCategories = []; 
+
+// localStorageから数値を取得する共通ヘルパー
+const getStorageFloat = (key, defaultValue) => {
+  const val = localStorage.getItem(key);
+  return val !== null ? parseFloat(val) : defaultValue;
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
   currentYear = now.getFullYear();
   currentMonth = now.getMonth();
 
-  // 1. まずユーザーが設定した「マイ・デフォルト値」を読み込む（なければ10と1）
-  const defaultImp = localStorage.getItem('defaultImpWeight') !== null ? parseFloat(localStorage.getItem('defaultImpWeight')) : 10;
-  const defaultDeadline = localStorage.getItem('defaultDeadlineWeight') !== null ? parseFloat(localStorage.getItem('defaultDeadlineWeight')) : 1;
+  const defaultImp = getStorageFloat('defaultImpWeight', 10);
+  const defaultDeadline = getStorageFloat('defaultDeadlineWeight', 1);
+  impWeight = getStorageFloat('impWeight', defaultImp);
+  deadlineWeight = getStorageFloat('deadlineWeight', defaultDeadline);
 
-  // 2. 現在のセッションの値を読み込む（なければ上記のデフォルト値）
-  impWeight = localStorage.getItem('impWeight') !== null ? parseFloat(localStorage.getItem('impWeight')) : defaultImp;
-  deadlineWeight = localStorage.getItem('deadlineWeight') !== null ? parseFloat(localStorage.getItem('deadlineWeight')) : defaultDeadline;
-
-  // 入力フォームへの反映
   const impInput = document.getElementById('weight-importance');
   const deadlineInput = document.getElementById('weight-deadline');
   const saveDefaultBtn = document.getElementById('btn-save-default');
@@ -27,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     impInput.value = impWeight;
     deadlineInput.value = deadlineWeight;
 
-    // 数値変更時のリアルタイムイベント
     impInput.addEventListener('input', (e) => {
       impWeight = parseFloat(e.target.value) || 0;
       localStorage.setItem('impWeight', impWeight);
@@ -41,83 +42,243 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 💾 「デフォルトとして設定」ボタンのイベント（確認フェーズの追加 ＆ 完了通知の廃止）
   if (saveDefaultBtn) {
     saveDefaultBtn.addEventListener('click', () => {
-      const isConfirmed = confirm(`現在の設定（重要度: ${impWeight}倍 / 期限: ${deadlineWeight}倍）を新しいデフォルト値として登録しますか？`);
-      if (isConfirmed) {
+      if (confirm(`現在の設定（重要度: ${impWeight}倍 / 期限: ${deadlineWeight}倍）を新しいデフォルト値として登録しますか？`)) {
         localStorage.setItem('defaultImpWeight', impWeight);
         localStorage.setItem('defaultDeadlineWeight', deadlineWeight);
-        // アクション完了後の不要なアラートは出さずに静かに処理を終えます
       }
     });
   }
 
-  // 🔄 「デフォルトに戻す」ボタンのイベント
   if (restoreDefaultBtn) {
     restoreDefaultBtn.addEventListener('click', () => {
-      const dImp = localStorage.getItem('defaultImpWeight') !== null ? parseFloat(localStorage.getItem('defaultImpWeight')) : 10;
-      const dDeadline = localStorage.getItem('defaultDeadlineWeight') !== null ? parseFloat(localStorage.getItem('defaultDeadlineWeight')) : 1;
-      
-      impWeight = dImp;
-      deadlineWeight = dDeadline;
-      
+      impWeight = getStorageFloat('defaultImpWeight', 10);
+      deadlineWeight = getStorageFloat('defaultDeadlineWeight', 1);
       if (impInput) impInput.value = impWeight;
       if (deadlineInput) deadlineInput.value = deadlineWeight;
-      
       localStorage.setItem('impWeight', impWeight);
       localStorage.setItem('deadlineWeight', deadlineWeight);
-      renderTaskList(); // リストを登録したデフォルト順に再描画
+      renderTaskList();
     });
   }
 
-  loadCategories();
+  // ドロップダウンUI制御
+  const dropdownTrigger = document.getElementById('dropdown-trigger');
+  const dropdownMenu = document.getElementById('dropdown-menu');
+  const inlineAddTrigger = document.getElementById('inline-add-trigger');
+  const inlineAddForm = document.getElementById('inline-add-form');
+  const inlineCategoryInput = document.getElementById('inline-category-name');
+  const btnInlineCategorySave = document.getElementById('btn-inline-category-save');
+
+  dropdownTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = dropdownMenu.classList.contains('show');
+    closeAllDropdowns();
+    if (!isOpen) dropdownMenu.classList.add('show');
+  });
+
+  inlineAddTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    inlineAddTrigger.style.display = 'none';
+    inlineAddForm.style.display = 'flex';
+    inlineCategoryInput.focus();
+  });
+
+  inlineAddForm.addEventListener('click', (e) => e.stopPropagation());
+
+  const submitInlineCategory = async () => {
+    const name = inlineCategoryInput.value.trim();
+    if (!name) return;
+
+    const res = await fetch('/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+
+    if (res.ok) {
+      inlineCategoryInput.value = '';
+      inlineAddForm.style.display = 'none';
+      inlineAddTrigger.style.display = 'block';
+      await loadCategories(name); 
+    } else {
+      const errData = await res.json();
+      alert(errData.error || 'カテゴリの追加に失敗しました');
+    }
+  };
+
+  btnInlineCategorySave.addEventListener('click', (e) => {
+    e.stopPropagation();
+    submitInlineCategory();
+  });
+
+  inlineCategoryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      submitInlineCategory();
+    }
+  });
+
+  document.addEventListener('click', () => closeAllDropdowns());
+
+  function closeAllDropdowns() {
+    if(dropdownMenu) dropdownMenu.classList.remove('show');
+    if(inlineAddForm) inlineAddForm.style.display = 'none';
+    if(inlineAddTrigger) inlineAddTrigger.style.display = 'block';
+  }
+
   loadTasks();
 
   document.getElementById('todo-form').addEventListener('submit', handleFormSubmit);
-  document.getElementById('category-form').addEventListener('submit', handleCategorySubmit);
   
   document.getElementById('prev-month').addEventListener('click', () => {
     currentMonth--;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    }
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
     renderCalendar();
   });
   
   document.getElementById('next-month').addEventListener('click', () => {
     currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
     renderCalendar();
   });
 });
 
-async function loadCategories() {
-  const res = await fetch('/categories');
-  const categories = await res.json();
-  
-  document.getElementById('task-category').innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  
-  const managementList = document.getElementById('category-management-list');
-  if (managementList) {
-    managementList.innerHTML = categories.map(c => `
-      <li style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px;">
-        <span>${c.name}</span>
-        <button class="delete-btn" style="padding: 3px 8px; font-size: 11px; margin: 0;" onclick="deleteCategory(${c.id})">削除</button>
-      </li>
-    `).join('');
+// カテゴリ表示生成
+async function loadCategories(autoSelectName = null) {
+  try {
+    const res = await fetch('/categories');
+    cachedCategories = await res.json();
+    
+    const listContainer = document.getElementById('custom-category-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    cachedCategories.forEach(category => {
+      const li = document.createElement('li');
+      li.className = 'dropdown-item';
+      
+      const nameSpan = document.createElement('span');
+      nameSpan.innerText = category.name;
+      li.appendChild(nameSpan);
+
+      // 🗑 削除ボタンの生成
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'inline-delete-btn';
+      delBtn.innerText = '🗑';
+      
+      const hasActiveTasks = Array.isArray(allTasks) && allTasks.some(t => {
+        const tCatId = t?.category_id || t?.category?.id;
+        return tCatId == category.id && !t?.is_completed;
+      });
+
+      if (hasActiveTasks) {
+        delBtn.disabled = true;
+        delBtn.classList.add('disabled'); 
+        delBtn.title = 'このカテゴリを使用中の未完了タスクがあるため削除できません';
+      } else {
+        delBtn.title = 'このカテゴリを削除';
+        delBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation(); 
+          
+          // 🛠️ ①の修正：confirmによる確認ダイアログを削除し、即時実行に変えました
+          try {
+            const delRes = await fetch(`/categories/${category.id}`, { method: 'DELETE' });
+            if (delRes.ok) {
+              if (document.getElementById('task-category-id').value == category.id) {
+                clearCategorySelection();
+              }
+              await loadTasks(); 
+            } else {
+              alert('カテゴリの削除に失敗しました');
+            }
+          } catch (err) {
+            console.error("削除通信エラー:", err);
+          }
+        });
+      }
+
+      li.appendChild(delBtn);
+
+      li.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectCategory(category.id, category.name);
+        document.getElementById('dropdown-menu').classList.remove('show');
+      });
+
+      listContainer.appendChild(li);
+    });
+
+    if (autoSelectName) {
+      const target = cachedCategories.find(c => c.name === autoSelectName);
+      if (target) selectCategory(target.id, target.name);
+    } else if (cachedCategories.length > 0 && !document.getElementById('task-category-id').value) {
+      selectCategory(cachedCategories[0].id, cachedCategories[0].name);
+    }
+  } catch (err) {
+    console.error("カテゴリ描画中にエラーが発生しました:", err);
   }
 }
 
+function selectCategory(id, name) {
+  const hiddenInput = document.getElementById('task-category-id');
+  const label = document.getElementById('selected-category-label');
+  if (hiddenInput) hiddenInput.value = id;
+  if (label) label.innerText = name;
+}
+
+function clearCategorySelection() {
+  const hiddenInput = document.getElementById('task-category-id');
+  const label = document.getElementById('selected-category-label');
+  if (hiddenInput) hiddenInput.value = '';
+  if (label) label.innerText = 'カテゴリを選択';
+}
+
 async function loadTasks() {
-  const res = await fetch('/tasks');
-  allTasks = await res.json();
-  renderTaskList();
-  renderCalendar();
+  try {
+    const res = await fetch('/tasks');
+    allTasks = await res.json();
+    await loadCategories();
+    renderTaskList();
+    renderCalendar();
+  } catch (err) {
+    console.error("タスク読み込みエラー:", err);
+  }
+}
+
+// タスクのHTML文字列を生成する共通リファクタリング関数
+function createTaskHTML(task, today) {
+  const dateStr = task?.deadline ? new Date(task.deadline).toLocaleDateString('ja-JP') : 'なし';
+  const catName = task?.category?.name || '未分類';
+  
+  let isOverdue = false;
+  if (task?.deadline && !task?.is_completed) {
+    const deadlineDate = new Date(task.deadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+    if (deadlineDate < today) isOverdue = true;
+  }
+
+  const deadlineBadge = task?.deadline 
+    ? `<span class="badge ${isOverdue ? 'badge-overdue' : ''}">期限:${dateStr}</span>` 
+    : '';
+
+  return `
+    <li class="task-item ${task?.is_completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}">
+      <div class="task-info">
+        <input type="checkbox" ${task?.is_completed ? 'checked' : ''} onchange="toggleTask(${task?.id}, this.checked)">
+        <span class="task-title-text"><strong>[${catName}]</strong> ${task?.title || ''}</span>
+      </div>
+      <div>
+        <span class="badge imp-${task?.importance || 1}">重要度:${task?.importance || 1}</span>
+        ${deadlineBadge}
+        <button class="delete-btn" onclick="deleteTask(${task?.id})">削除</button>
+      </div>
+    </li>
+  `;
 }
 
 function renderTaskList() {
@@ -125,62 +286,35 @@ function renderTaskList() {
   today.setHours(0, 0, 0, 0);
 
   const sortedTasks = [...allTasks].sort((a, b) => {
-    if (a.is_completed !== b.is_completed) {
-      return a.is_completed ? 1 : -1;
-    }
-
+    if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
     const calcScore = (task) => {
-      let score = task.importance * impWeight;
-      
-      if (task.deadline) {
+      let score = (task?.importance || 0) * impWeight;
+      if (task?.deadline) {
         const deadlineDate = new Date(task.deadline);
         deadlineDate.setHours(0, 0, 0, 0);
         const daysLeft = Math.round((deadlineDate - today) / (1000 * 60 * 60 * 24));
         score -= (daysLeft * deadlineWeight);
+      } else {
+        // 🛠️ ③の修正：無期限タスクは「猶予がたっぷり（30日分）あるタスク」として扱い、スコアを低く抑えます
+        score -= (30 * deadlineWeight);
       }
       return score;
     };
-
     return calcScore(b) - calcScore(a);
   });
 
   const list = document.getElementById('task-list');
-  list.innerHTML = sortedTasks.map(task => {
-    const dateStr = task.deadline ? new Date(task.deadline).toLocaleDateString('ja-JP') : 'なし';
-    return `
-      <li class="task-item ${task.is_completed ? 'completed' : ''}">
-        <div class="task-info">
-          <input type="checkbox" ${task.is_completed ? 'checked' : ''} onchange="toggleTask(${task.id}, this.checked)">
-          <span class="task-title-text"><strong>[${task.category.name}]</strong> ${task.title}</span>
-        </div>
-        <div>
-          <span class="badge imp-${task.importance}">重要度:${task.importance}</span>
-          <span class="badge">期限:${dateStr}</span>
-          <button class="delete-btn" onclick="deleteTask(${task.id})">削除</button>
-        </div>
-      </li>
-    `;
-  }).join('');
+  if (list) {
+    list.innerHTML = sortedTasks.map(task => createTaskHTML(task, today)).join('');
+  }
 
   const noDeadlineList = document.getElementById('no-deadline-list');
   if (noDeadlineList) {
-    const noDeadlineTasks = sortedTasks.filter(task => !task.deadline);
-    
+    const noDeadlineTasks = sortedTasks.filter(task => !task?.deadline);
     if (noDeadlineTasks.length === 0) {
       noDeadlineList.innerHTML = '<li style="color: #aaa; font-size: 14px; padding: 5px 0;">なし</li>';
     } else {
-      noDeadlineList.innerHTML = noDeadlineTasks.map(task => `
-        <li class="task-item ${task.is_completed ? 'completed' : ''}" style="padding: 8px 0;">
-          <div class="task-info">
-            <input type="checkbox" ${task.is_completed ? 'checked' : ''} onchange="toggleTask(${task.id}, this.checked)">
-            <span class="task-title-text" style="font-size: 14px;"><strong>[${task.category.name}]</strong> ${task.title}</span>
-          </div>
-          <div>
-            <span class="badge imp-${task.importance}">重要度:${task.importance}</span>
-            <button class="delete-btn" style="padding: 3px 8px; font-size: 11px; margin: 0 0 0 5px;" onclick="deleteTask(${task.id})">削除</button>
-          </div>
-        </li>
-      `).join('');
+      noDeadlineList.innerHTML = noDeadlineTasks.map(task => createTaskHTML(task, today)).join('');
     }
   }
 }
@@ -190,7 +324,12 @@ async function handleFormSubmit(e) {
   const title = document.getElementById('task-title').value;
   const deadline = document.getElementById('task-deadline').value;
   const importance = document.getElementById('task-importance').value;
-  const category_id = document.getElementById('task-category').value;
+  const category_id = document.getElementById('task-category-id').value; 
+
+  if (!category_id) {
+    alert('カテゴリを選択してください');
+    return;
+  }
 
   const res = await fetch('/tasks', {
     method: 'POST',
@@ -199,6 +338,11 @@ async function handleFormSubmit(e) {
   });
   if (res.ok) { 
     document.getElementById('todo-form').reset(); 
+    if (cachedCategories.length > 0) {
+      selectCategory(cachedCategories[0].id, cachedCategories[0].name);
+    } else {
+      clearCategorySelection();
+    }
     loadTasks(); 
   }
 }
@@ -210,14 +354,16 @@ async function toggleTask(id, is_completed) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_completed })
     });
-    loadTasks();
-  } catch (error) {
-    console.error('ステータス更新エラー:', error);
-  }
+    loadTasks(); 
+  } catch (error) { console.error(error); }
 }
 
 function renderCalendar() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const grid = document.getElementById('calendar-grid');
+  if (!grid) return;
   grid.innerHTML = '';
   document.getElementById('calendar-month-year').innerText = `${currentYear}年 ${currentMonth + 1}月`;
 
@@ -233,18 +379,23 @@ function renderCalendar() {
     cell.className = 'calendar-cell';
     cell.innerHTML = `<span class="day-num">${date}</span>`;
 
-    const targetDateStr = new Date(currentYear, currentMonth, date).toLocaleDateString('ja-JP');
+    const cellDate = new Date(currentYear, currentMonth, date);
+    cellDate.setHours(0, 0, 0, 0);
+    const targetDateStr = cellDate.toLocaleDateString('ja-JP');
     
     const dayTasks = allTasks.filter(t => {
-      if (!t.deadline || t.is_completed) return false;
+      if (!t?.deadline || t?.is_completed) return false;
       return new Date(t.deadline).toLocaleDateString('ja-JP') === targetDateStr;
     });
 
     if (dayTasks.length > 0) {
-      const maxImportance = Math.max(...dayTasks.map(t => t.importance));
-      
       const dot = document.createElement('div');
-      dot.className = `has-task imp-${maxImportance}`;
+      if (cellDate < today) {
+        dot.className = 'has-task overdue';
+      } else {
+        const maxImportance = Math.max(...dayTasks.map(t => t?.importance || 1));
+        dot.className = `has-task imp-${maxImportance}`;
+      }
       cell.appendChild(dot);
     }
     grid.appendChild(cell);
@@ -253,54 +404,8 @@ function renderCalendar() {
 
 async function deleteTask(id) {
   try {
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: 'DELETE',
-    });
-    if (response.ok) {
-      loadTasks();
-    } else {
-      alert('削除に失敗しました');
-    }
-  } catch (error) {
-    console.error('エラーが発生しました:', error);
-    alert('通信エラーが発生しました');
-  }
-}
-
-async function handleCategorySubmit(e) {
-  e.preventDefault();
-  const nameInput = document.getElementById('new-category-name');
-  const name = nameInput.value.trim();
-
-  const res = await fetch('/categories', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-
-  if (res.ok) {
-    nameInput.value = ''; 
-    await loadCategories(); 
-  } else {
-    const errData = await res.json();
-    alert(errData.error || 'カテゴリの追加に失敗しました');
-  }
-}
-
-async function deleteCategory(id) {
-  try {
-    const res = await fetch(`/categories/${id}`, {
-      method: 'DELETE'
-    });
-    if (res.ok) {
-      await loadCategories();
-      loadTasks(); 
-    } else {
-      const errData = await res.json();
-      alert(errData.error || 'カテゴリの削除に失敗しました');
-    }
-  } catch (error) {
-    console.error('エラーが発生しました:', error);
-    alert('通信エラーが発生しました');
-  }
+    // 🛠️ ②の修正：サーバーの設計に合わせて元の `/api/tasks/${id}` に差し戻しました
+    const response = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    if (response.ok) { loadTasks(); } else { alert('削除に失敗しました'); }
+  } catch (error) { console.error(error); alert('通信エラーが発生しました'); }
 }

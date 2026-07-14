@@ -31,6 +31,18 @@ section {
   gap: 15px; 
   margin: 15px 0; 
   flex-wrap: wrap; 
+  align-items: flex-end;
+}
+
+.form-item {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: bold;
 }
 
 input[type="text"], select, input[type="date"], input[type="number"] { 
@@ -44,7 +56,148 @@ input[type="text"] {
   box-sizing: border-box; 
 }
 
-/* 標準のプライマリボタン */
+/* カスタムドロップダウン（綺麗に集約） */
+.custom-dropdown {
+  position: relative;
+  width: 220px;
+  user-select: none;
+}
+
+.dropdown-trigger {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: #888;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-top: 4px;
+  z-index: 999; 
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dropdown-item {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 35px 8px 12px; /* 右端のゴミ箱と被らないよう余白を確保 */
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f0f7fc;
+}
+
+/* 🗑️ カテゴリ用インラインゴミ箱ボタン */
+.inline-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: #e74c3c;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.inline-delete-btn:not(.disabled):hover {
+  background-color: #fce4e4;
+}
+
+/* 🔒 削除できないゴミ箱 */
+.inline-delete-btn.disabled,
+.inline-delete-btn:disabled {
+  color: #cccccc;
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* ドロップダウン下部の追加セクション */
+.dropdown-footer {
+  padding: 8px;
+  background-color: #fafbfc;
+  border-top: 1px solid #eee;
+}
+
+.inline-add-trigger {
+  font-size: 13px;
+  color: #27ae60;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px;
+  text-align: center;
+  border-radius: 3px;
+}
+.inline-add-trigger:hover {
+  background-color: #ebf7ee;
+}
+
+.inline-add-form {
+  display: flex;
+  gap: 5px;
+}
+
+.inline-add-form input {
+  flex: 1;
+  padding: 5px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.inline-add-form button {
+  padding: 5px 10px;
+  font-size: 12px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.inline-add-form button:hover {
+  background-color: #27ae60;
+}
+
+/* 標準のボタン */
 button, .primary-btn { 
   background-color: #3498db; 
   color: white; 
@@ -53,19 +206,15 @@ button, .primary-btn {
   border-radius: 4px; 
   cursor: pointer; 
 }
+button:hover, .primary-btn:hover { background-color: #2980b9; }
 
-button:hover, .primary-btn:hover { 
-  background-color: #2980b9; 
-}
-
-/* ⚙️ チューニングパネル用スタイル */
+/* チューニングパネル用 */
 .tuning-grid {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
   align-items: flex-end;
 }
-
 .tuning-item {
   flex: 1;
   min-width: 200px;
@@ -73,26 +222,10 @@ button:hover, .primary-btn:hover {
   flex-direction: column;
   gap: 8px;
 }
+.tuning-item label { font-size: 14px; font-weight: bold; color: #34495e; }
+.tuning-item input[type="number"] { width: 100%; box-sizing: border-box; font-size: 15px; }
+.tuning-action { display: flex; gap: 10px; flex-wrap: wrap; }
 
-.tuning-item label {
-  font-size: 14px;
-  font-weight: bold;
-  color: #34495e;
-}
-
-.tuning-item input[type="number"] {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 15px;
-}
-
-.tuning-action {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-/* セカンダリボタン */
 .secondary-btn {
   background-color: #95a5a6;
   color: white;
@@ -101,29 +234,17 @@ button:hover, .primary-btn:hover {
   border-radius: 4px;
   cursor: pointer;
 }
-
-.secondary-btn:hover {
-  background-color: #7f8c8d;
-}
+.secondary-btn:hover { background-color: #7f8c8d; }
 
 /* レイアウト */
-.main-content { 
-  display: flex; 
-  gap: 20px; 
-}
-
-.list-section { 
-  flex: 3; 
-}
-
-.calendar-section { 
-  flex: 2; 
-}
+.main-content { display: flex; gap: 20px; }
+.list-section { flex: 3; }
+.calendar-section { flex: 2; }
 
 /* タスク一覧 */
-ul { 
-  list-style: none; 
-  padding: 0; 
+#task-list, #no-deadline-list {
+  padding: 0;
+  list-style: none;
 }
 
 .task-item { 
@@ -133,70 +254,39 @@ ul {
   padding: 10px; 
   border-bottom: 1px solid #eee; 
 }
+.task-item.completed .task-title-text { text-decoration: line-through; color: #aaa; }
 
-.task-item.completed .task-title-text { 
-  text-decoration: line-through; 
-  color: #aaa; 
-}
+/* 期限超過タスク */
+.task-item.overdue .task-title-text { color: #c0392b; font-weight: bold; }
+.badge.badge-overdue { background-color: #c0392b !important; color: white !important; }
 
 /* タスク内のバッジ */
-.badge { 
-  padding: 2px 6px; 
-  border-radius: 4px; 
-  font-size: 12px; 
-  color: black; 
-  margin-left: 5px; 
-}
+.badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; color: black; margin-left: 5px; }
+.badge.imp-5 { background: #e74c3c; }
+.badge.imp-4 { background: #e67e22; }
+.badge.imp-3 { background: #ffff00; }
+.badge.imp-2 { background: #cfff00; }
+.badge.imp-1 { background: #a0ff00; }
 
-.badge.imp-5 { 
-  background: #e74c3c; 
+/* カレンダー下の「期限のないタスク」専用個別スタイル（JSからスタイルを分離） */
+#no-deadline-list .task-item {
+  padding: 8px 0;
 }
-
-.badge.imp-4 { 
-  background: #e67e22; 
+#no-deadline-list .task-title-text {
+  font-size: 14px;
 }
-
-.badge.imp-3 {
-  background: #ffff00;
-}
-
-.badge.imp-2 {
-  background: #cfff00;
-}
-
-.badge.imp-1 {
-  background: #a0ff00;
+#no-deadline-list .delete-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  margin: 0 0 0 5px;
 }
 
 /* カレンダー用 */
-#calendar-controls { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-bottom: 10px; 
-}
-
-.calendar-grid-header, .calendar-grid { 
-  display: grid; 
-  grid-template-columns: repeat(7, 1fr); 
-  text-align: center; 
-}
-
-.calendar-grid-header div { 
-  font-weight: bold; 
-  padding: 5px 0; 
-}
-
-.calendar-cell { 
-  min-height: 40px; 
-  border: 1px solid #f0f0f0; 
-  padding: 5px; 
-  position: relative; 
-}
-
-.calendar-cell .day-num { 
-  font-size: 12px; 
-}
+#calendar-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.calendar-grid-header, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.calendar-grid-header div { font-weight: bold; padding: 5px 0; }
+.calendar-cell { min-height: 40px; border: 1px solid #f0f0f0; padding: 5px; position: relative; }
+.calendar-cell .day-num { font-size: 12px; }
 
 .calendar-cell .has-task { 
   width: 8px; 
@@ -210,27 +300,13 @@ ul {
   box-sizing: border-box;
 }
 
-/* カレンダーのドットを重要度別に色分け */
 .calendar-cell .has-task.imp-1 { background: #a0ff00; }
 .calendar-cell .has-task.imp-2 { background: #cfff00; }
 .calendar-cell .has-task.imp-3 { background: #ffff00; }
 .calendar-cell .has-task.imp-4 { background: #e67e22; }
 .calendar-cell .has-task.imp-5 { background: #e74c3c; }
+.calendar-cell .has-task.overdue { background: #000000 !important; border-color: #000000 !important; }
 
-.delete-btn {
-  background-color: #e74c3c; 
-  padding: 6px 12px;
-  font-size: 13px;
-  margin-left: 10px;
-}
-
-.delete-btn:hover {
-  background-color: #c0392b; 
-}
-
-.task-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.delete-btn { background-color: #e74c3c; padding: 6px 12px; font-size: 13px; margin-left: 10px; }
+.delete-btn:hover { background-color: #c0392b; }
+.task-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

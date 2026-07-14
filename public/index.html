@@ -25,24 +25,29 @@
               <option value="5">5 (高)</option>
             </select>
           </label>
-          <label>カテゴリ: <select id="task-category" required></select></label>
+          <div class="form-item">
+            <span class="form-label">カテゴリ:</span> 
+            <div class="custom-dropdown" id="category-dropdown">
+              <div class="dropdown-trigger" id="dropdown-trigger">
+                <span id="selected-category-label">カテゴリを選択</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+              <div class="dropdown-menu" id="dropdown-menu">
+                <ul class="dropdown-list" id="custom-category-list"></ul>
+                <div class="dropdown-footer">
+                  <div class="inline-add-trigger" id="inline-add-trigger">＋ 新しいカテゴリを追加</div>
+                  <div class="inline-add-form" id="inline-add-form" style="display: none;">
+                    <input type="text" id="inline-category-name" placeholder="カテゴリ名を入力">
+                    <button type="button" id="btn-inline-category-save">確定</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="task-category-id" required>
+          </div>
         </div>
         <button type="submit">タスクを追加</button>
       </form>
-    </section>
-
-    <section class="form-section">
-      <h2>新しいカテゴリを追加</h2>
-      <form id="category-form">
-        <div class="form-row">
-          <input type="text" id="new-category-name" placeholder="カテゴリ名を入力（例: 趣味）" required>
-          <button type="submit">カテゴリを追加</button>
-        </div>
-      </form>
-      <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-        <h3 style="font-size: 16px; color: #555;">登録済みのカテゴリ</h3>
-        <ul id="category-management-list" style="padding: 0; list-style: none;"></ul>
-      </div>
     </section>
 
     <section class="config-section">
@@ -83,7 +88,7 @@
         <div id="calendar-grid" class="calendar-grid"></div>
         <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px;">
           <h3 style="font-size: 16px; color: #555; margin-bottom: 10px;">📋 期限のないタスク</h3>
-          <ul id="no-deadline-list" style="padding: 0; list-style: none;"></ul>
+          <ul id="no-deadline-list"></ul>
         </div>
       </section>
     </div>
